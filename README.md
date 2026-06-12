@@ -150,6 +150,7 @@
   styles, and messages should not be assumed.
 
 # Updates:
+```text
   12/06-2026  Updated file structure.
               Several new support functions directly on the ListBox level:
                 Overloaded Add/Insert new items with Ints[]/Objects[] support
@@ -165,3 +166,4 @@
               New .Ints[Index] property (uses Items.Objects[] to store the value)
               Renamed Checked to Checks for Multi-CheckBox access
               New Checked that always uses CheckBoxNo = 0 for better compatibilty
+```
