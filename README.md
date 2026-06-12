@@ -161,12 +161,12 @@
                 .LOW and .HIGH accessors (to use in FOR I:=LOW TO HIGH)
                 CheckAll
                 UncheckAll
-                SetCheck (with a possible "don't fire OnCheck events)
+                SetCheck (with a possible "don't fire OnCheck events")
                 Overloaded SetItemIndex (with a possible "don't fire OnClick" events)
-                .CheckBoxStyle property (Modern/Classic)
-                .KbdCheckBoxNo to specify which CheckBox the SPACE key toggles
-                .AutoAdvance to specify if SPACE key toggling advances to next item
+              .CheckBoxStyle property (Modern/Classic)
+              .KbdCheckBoxNo to specify which CheckBox the SPACE key toggles
+              .AutoAdvance to specify if SPACE key toggling advances to next item
               New .Ints[Index] property (uses Items.Objects[] to store the value)
               Renamed Checked to Checks for Multi-CheckBox access
-              New Checked that always uses CheckBoxNo = 0 for better compatibilty
+              New Checked property that always uses CheckBoxNo = 0 for better compatibilty
 ```
