@@ -146,3 +146,19 @@
   with normal listbox usage, but native listbox-specific Windows behavior,
   styles, and messages should not be assumed.
 
+### Updates:
+  12/06-2026  Updated file structure.
+              Several new support functions directly on the ListBox level:
+                Overloaded Add/Insert new items with Ints[]/Objects[] support
+                Direct access to Items.Objects[] via ListBox.Objects[]
+                IndexOf(String/Object/Integer)
+                ValidIndex check function
+                CheckedIndices / VisibleItems -> TArray<Integer>
+                .LOW and .HIGH accessors (to use in FOR I:=LOW TO HIGH)
+                CheckAll
+                UncheckAll
+                SetCheck (with a possible "don't fire OnCheck events)
+                Overloaded SetItemIndex (with a possible "don't fire OnClick" events)
+              New .Ints[Index] property (uses Items.Objects[] to store the value)
+              Renamed Checked to Checks for Multi-CheckBox access
+              New Checked that always uses CheckBoxNo = 0 for better compatibilty
