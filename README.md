@@ -83,16 +83,19 @@
 
   Checkbox indexes are zero-based.
 
-  Checked[Index, CheckBoxNo]
+  Checks[Index, CheckBoxNo]
   --------------------------
 
   Gets or sets the checked state of one checkbox for one logical item.
 
-      Checked[5, 0] := True;
-      Checked[5, 1] := False;
+      Checks[5, 0] := True;
+      Checks[5, 1] := False;
 
   The first index is the logical item index.
   The second index is the checkbox number, from 0 to CheckBoxCount - 1.
+
+  There's also a backwards-compatible Checked[Index] that always operate
+  on CheckBoxNo = 0.
 
   When the checked state actually changes, OnCheckBoxClicked is fired. This
   happens both for user interaction and for programmatic changes through the
@@ -146,7 +149,7 @@
   with normal listbox usage, but native listbox-specific Windows behavior,
   styles, and messages should not be assumed.
 
-### Updates:
+# Updates:
   12/06-2026  Updated file structure.
               Several new support functions directly on the ListBox level:
                 Overloaded Add/Insert new items with Ints[]/Objects[] support
