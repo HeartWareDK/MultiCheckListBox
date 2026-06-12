@@ -14,7 +14,7 @@
   This source code may be used, modified, and redistributed in private or
   non-commercial projects, provided that this license notice remains intact.
 
-  Commercial use is not permitted.
+  Commercial use is not permitted without prior agreement with the author.
 
   For the purposes of this license, commercial use includes, but is not
   limited to, selling the software, including it in paid products, using it
