@@ -13,20 +13,21 @@ unit HeartWare.MultiCheckListBox;
   This source code may be used, modified, and redistributed in private or
   non-commercial projects, provided that this license notice remains intact.
 
-  Commercial use is not permitted.
+  Commercial use is not permitted without prior agreement.
 
   For the purposes of this license, commercial use includes, but is not
   limited to, selling the software, including it in paid products, using it
   in paid client work, using it in donation-supported products, accepting
   donations or sponsorships connected to the software, or receiving any other
-  monetary compensation related to the use or distribution of this code.
+  monetary compensation or value-based items related to the use or distribution
+  of this code.
 
   For commercial licensing, contact the author.
 
   This is a custom-drawn VCL TCheckListBox-style control that behaves like a
   logical TCheckListBox, but with two important extensions:
 
-    1) Each item may have zero, one, or several checkboxes
+    1) Each item may have zero, one, or several CheckBoxes
        (same count for all Items).
     2) Individual items may be hidden without removing them from Items.
 
@@ -36,8 +37,7 @@ unit HeartWare.MultiCheckListBox;
 
   Logical item indexes
   --------------------
-
-  Items, Count, ItemIndex, Checked[], VisibleItem[] and Selected[] all use the
+  Items, Count, ItemIndex, Checks[], VisibleItem[] and Selected[] all use the
   original logical item index.
 
   If Items contains:
@@ -52,7 +52,8 @@ unit HeartWare.MultiCheckListBox;
       VisibleItem[2] := False;
 
   then only Alpha, Beta and Delta are drawn, but the logical indexes remain
-  0, 1, 2 and 3. Selecting the bottom visible row therefore returns:
+  0, 1, 2 and 3. Clicking or navigating to the bottom visible row therefore
+  returns:
 
       ItemIndex = 3
 
@@ -60,7 +61,6 @@ unit HeartWare.MultiCheckListBox;
 
   VisibleItem[Index]
   ------------------
-
   Controls whether a logical item is currently displayed.
 
       VisibleItem[Index] := False;
@@ -73,77 +73,125 @@ unit HeartWare.MultiCheckListBox;
 
   CheckBoxCount
   -------------
+  Defines how many CheckBoxes each item has.
 
-  Defines how many checkboxes each item has.
-
-      CheckBoxCount := 0;  // no checkboxes, TlistBox-style display only
+      CheckBoxCount := 0;  // no CheckBoxes, TListBox-style display only
       CheckBoxCount := 1;  // ordinary TCheckListBox look
-      CheckBoxCount := 3;  // three independent checkboxes per item
+      CheckBoxCount := 3;  // three independent CheckBoxes per item
 
-  Checkbox indexes are zero-based.
+  All items have the same number of ChexkBoxes.
 
-  Checked[Index, CheckBoxNo]
+  CheckBox indexes are zero-based.
+
+  Checks[Index, CheckBoxNo]
+  Checked[Index]
   --------------------------
+  Gets or sets the checked state of one CheckBox for one logical item.
 
-  Gets or sets the checked state of one checkbox for one logical item.
-
-      Checked[5, 0] := True;
-      Checked[5, 1] := False;
+      Checks[5, 0] := True;
+      Checks[5, 1] := False;
 
   The first index is the logical item index.
-  The second index is the checkbox number, from 0 to CheckBoxCount - 1.
+  The second index is the CheckBox number, from 0 to CheckBoxCount - 1.
+
+  There's also a Checked[Index] : Boolean property that always addresses
+  CheckBoxNo = 0 (for easy and backward-compatible use with plain TCheckBoxList)
 
   When the checked state actually changes, OnCheckBoxClicked is fired. This
   happens both for user interaction and for programmatic changes through the
-  Checked[] property.
+  Checks[] property.
+
+  However, see the description of OnCheckBoxClicked for overrides to this rule.
 
   ItemIndex and OnClick
   ---------------------
-
   ItemIndex is the logical selected item index, not the visible row number.
 
   OnClick is treated as an "ItemIndex changed" event. It fires when ItemIndex
   changes, including keyboard navigation. Merely clicking the already-selected
   item does not count as an ItemIndex change.
 
+  There are user-callable SetItemIndex methods with an optional "FireEvent"
+  parameter (default TRUE) that either suppresses or enforces an OnClick event,
+  regardless of whether or not the selected item value changes.
+
   OnCheckBoxClicked
   -----------------
-
-  Fires whenever a checkbox changes state.
+  Fires whenever a CheckBox changes state.
 
       OnCheckBoxClicked(Sender, ItemIndex, CheckBoxIndex, State)
 
   ItemIndex is the logical item index.
-  CheckBoxIndex is the zero-based checkbox number.
+  CheckBoxIndex is the zero-based CheckBox number.
   State is the new checked state (Boolean).
 
   This event is fired for mouse clicks, keyboard toggles, and manual assignment
   to Checked[Index, CheckBoxNo], but only if the state actually changes.
 
+  There are user-callable SetCheck methods to set CheckBoxes, again with an
+  optional "FireEvent" parameter that overrides the "only when changed"
+  condition and unconditionally calls (or suppresses) the OnChecked events.
+
+  LOW / HIGH / ValidIndex
+  -----------------------
+  Helpers to easily iterate over all (logical) indexes, and to check if a given
+  index is valid.
+
   BeginUpdate / EndUpdate
   -----------------------
-
   Use BeginUpdate / EndUpdate when changing many item states, especially
   VisibleItem[], to suppress repeated redraws and scrollbar recalculations.
 
       BeginUpdate;
       try
-        for I := 0 to Count - 1 do
+        for I := LOW to HIGH do
           VisibleItem[I] := ShouldShowItem(I);
       finally
         EndUpdate;
       end;
 
-  The control refreshes itself when the final matching EndUpdate is called.
+  BeginUpdate/EndUpdate can be nested.
+
+  The control refreshes itself only when the final matching EndUpdate is called,
+  ie. when there has been a sufficient number of "EndUpdate" calls to counteract
+  all the ecurrently active BeginUpdate calls.
+
+  OnGetTextInfo
+  -------------
+  This event is called whenever an item is about to be drawn. You can update
+  the values (Font/Background Color) to have the item drawn using your
+  modified values, but do not change the height of the Font, as there will
+  not be enough/too much room in the visible portion to display the text.
+
+  The text is drawn in the color that is contained within the TFont given.
+
+  KbdCheckBoxNo
+  -------------
+  Specifies the CheckBoxNo that is toggled on keyboard (Space bar) toggling.
+  Default = 0 (the first CheckBox).
+
+  AutoAdvance
+  -----------
+  Specifies whether or not the selection bar advances to the next visible item
+  in the list, if you use the keyboard to toggle the Checked state (of
+  CheckBoxNo = KbdCheckBoxNo).
 
   Notes
   -----
-
-  Because this is a custom-drawn control rather than a native listbox, only
+  Because this is a custom-drawn control rather than a native ListBox, only
   the TCheckListBox-like behavior explicitly implemented by the component is
   available. The Items collection and logical selection model are compatible
-  with normal listbox usage, but native listbox-specific Windows behavior,
+  with normal ListBox usage, but native ListBox-specific Windows behavior,
   styles, and messages should not be assumed.
+
+  Since the attached TStringList's Objects[] property is used for storing
+  the Ints[] values, it is not safe to mix Objects[] and Ints[] in the same
+  ListBox, unless you have another way to distinguish between these.
+
+  Also, it is explicitly unsafe to call Clear(True) if you have stored Ints[]
+  in the ListBox, as this will result in an attempt to free a value that is
+  not an Object, but an arbitary index (which will then be interpreted as the
+  address of a TObject instance).
 }
 
 interface
@@ -166,6 +214,7 @@ type
   THWMultiCheckListBox = class;
 
   THWCheckBoxClickedEvent = procedure(Sender: TObject; ItemIndex, CheckBoxIndex: Integer; State: Boolean) of object;
+  THWOnGetTextInfoEvent = procedure(Sender: TObject; Index: Integer; F: TFont; var BkColor: TColor; Enabled, Focused, Selected: Boolean) of object;
 
   THWMultiCheckListBoxStrings = class(TStringList)
   private
@@ -196,6 +245,11 @@ type
 
     FOnClickCheck: TNotifyEvent;
     FOnCheckBoxClicked: THWCheckBoxClickedEvent;
+    FOnGetTextInfo: THWOnGetTextInfoEvent;
+
+    function Form: TCustomForm;
+    function Monitor: TMonitor;
+    function Scale(Dpi96: Integer): Integer;
 
     function GetCount: Integer;
     function GetChecked(Index, CheckBoxNo: Integer): Boolean;
@@ -239,7 +293,7 @@ type
 
     procedure DrawItem(Index, Y: Integer);
     function CheckBoxNoAtX(X: Integer): Integer;
-    function Updating: Boolean; inline;
+    function Updating: Boolean; reintroduce; inline;
 
     procedure WMVScroll(var Message: TWMVScroll); message WM_VSCROLL;
     procedure WMGetDlgCode(var Message: TWMGetDlgCode); message WM_GETDLGCODE;
@@ -254,6 +308,7 @@ type
     procedure SetObj(Index: Integer; Value: TObject);
 
     procedure SetCheckAll(CheckBoxNo: Integer; Checked, FireEvent: Boolean);
+    procedure SetKbdChkBoxNo(Value: Integer);
 
   protected
     procedure CreateParams(var Params: TCreateParams); override;
@@ -263,6 +318,7 @@ type
     procedure DoEnter; override;
     procedure DoExit; override;
     procedure DoClickCheck; virtual;
+    procedure DoGetTextInfo(Index: Integer; F: TFont; var BkColor: TColor; Enabled, Focused, Selected: Boolean);
 
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     function DoMouseWheel(Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint): Boolean; override;
@@ -287,6 +343,7 @@ type
     function ValidCheckBox(CheckBoxNo: Integer): Boolean; inline;
     procedure Clear(FreeObjects: Boolean = False);
     function VisibleItems: TArray<Integer>;
+    function CheckedIndices(CheckBoxNo: Integer = 0): TArray<Integer>;
     function Add(const S: String; O: TObject = nil): Integer; overload; inline;
     function Add(const S: String; I: NativeInt): Integer; overload; inline;
     function Add(const S: String; I: NativeInt; Checked: Boolean): Integer; overload; inline;
@@ -303,7 +360,9 @@ type
     procedure SetItem(Index: Integer; const S: String ; O: TObject); inline;
 
     function SetCheck(Index,CheckBoxNo: Integer; State: Boolean; FireEvent: Boolean = True): Integer; OVERLOAD;
+    function SetCheck(Index: Integer; State: Boolean; FireEvent: Boolean = True): Integer; OVERLOAD;
     function SetCheck(O: TObject; CheckBoxNo: Integer; State: Boolean; FireEvent: Boolean = True) : Integer; OVERLOAD;
+    function SetCheck(O: TObject; State: Boolean; FireEvent: Boolean = True) : Integer; OVERLOAD;
     function SetCheckInt(I: NativeInt; CheckBoxNo: Integer; State: Boolean; FireEvent: Boolean = True) : Integer; OVERLOAD;
     function SetCheckInt(I: NativeInt; State: Boolean; FireEvent: Boolean = True) : Integer; OVERLOAD; INLINE;
 
@@ -317,7 +376,6 @@ type
     property Objects[Index: Integer]: TObject read GetObj Write SetObj;
     function NextVisible(Index: Integer; Wrap: Boolean): Integer;
     function IsEmpty: Boolean; inline;
-    function CheckedIndices(CheckBoxNo: Integer = 0): TArray<Integer>;
 
     function FirstVisibleIndex: Integer;
     function LastVisibleIndex: Integer;
@@ -326,8 +384,8 @@ type
 
     procedure UncheckAll(FireEvent: Boolean; CheckBoxNo: Integer = 0); overload; inline;
     procedure UncheckAll(CheckBoxNo: Integer; FireEvent: Boolean = True); overload;
-    procedure checkAll(FireEvent: Boolean; CheckBoxNo: Integer = 0); overload; inline;
-    procedure checkAll(CheckBoxNo: Integer; FireEvent: Boolean = True); overload;
+    procedure CheckAll(FireEvent: Boolean; CheckBoxNo: Integer = 0); overload; inline;
+    procedure CheckAll(CheckBoxNo: Integer; FireEvent: Boolean = True); overload;
 
   published
     property Align;
@@ -360,7 +418,7 @@ type
     property Visible;
 
     property OnClick;
-    property OnClickCheck: TNotifyEvent read FOnClickCheck write FOnClickCheck; // legacy: user checkbox click/space only
+    property OnClickCheck: TNotifyEvent read FOnClickCheck write FOnClickCheck; // legacy: user CheckBox click/space only
     property OnCheckBoxClicked: THWCheckBoxClickedEvent read FOnCheckBoxClicked write FOnCheckBoxClicked;
     property OnDblClick;
     property OnEnter;
@@ -374,8 +432,9 @@ type
     property OnMouseMove;
     property OnMouseUp;
   published
+    property OnGetTextInfo: THWOnGetTextInfoEvent read FOnGetTextInfo write FOnGetTextInfo;
     property AutoAdvance: Boolean read FAutoAdvance write FAutoAdvance default True;
-    property KbdCheckBoxNo: Integer read FKbdChkBoxNo write FKbdChkBoxNo;
+    property KbdCheckBoxNo: Integer read FKbdChkBoxNo write SetKbdChkBoxNo;
     property CheckBoxStyle: TCheckBoxStyle read FCheckBoxStyle write SetCheckBoxStyle default TCheckBoxStyle.Modern;
   end;
 
@@ -524,6 +583,13 @@ begin
   end;
 end;
 
+procedure THWMultiCheckListBox.SetKbdChkBoxNo(Value: Integer);
+begin
+  if not InRange(Value, -1, CheckBoxCount - 1) then
+    raise EListError.CreateFmt('Keyboard CheckBox index out of bounds (%d)', [Value]);
+  FKbdChkBoxNo := Value;
+end;
+
 procedure THWMultiCheckListBox.SetObj(Index: Integer; Value: TObject);
 begin
   Items.Objects[Index]:=Value;
@@ -544,15 +610,20 @@ end;
 procedure THWMultiCheckListBox.CheckCheckBoxNo(CheckBoxNo: Integer);
 begin
   if not ValidCheckBox(CheckBoxNo) then
-    raise EListError.CreateFmt('Checkbox index out of bounds (%d)', [CheckBoxNo]);
+    raise EListError.CreateFmt('CheckBox index out of bounds (%d)', [CheckBoxNo]);
 end;
 
 function THWMultiCheckListBox.CheckedIndices(CheckBoxNo: Integer = 0): TArray<Integer>;
 var
-  I: Integer;
+  I, J: Integer;
 begin
-  SetLength(Result, 0);
-  for I := LOW to HIGH do if Checks[I, CheckBoxNo] then Result := Result + [I];
+  SetLength(Result, Count);
+  J := System.LOW(Result);
+  for I := LOW to HIGH do if Checks[I, CheckBoxNo] then begin
+    Result[J] := I;
+    INC(J);
+  end;
+  SetLength(Result, J)
 end;
 
 function THWMultiCheckListBox.Insert(Index: Integer; const S: String; O: TObject): Integer;
@@ -565,6 +636,7 @@ function THWMultiCheckListBox.Insert(Index: Integer; const S: String; I: NativeI
 begin
   Items.Insert(Index, S);
   Ints[Index] := I;
+  Result := Index;
 end;
 
 function THWMultiCheckListBox.Insert(Index: Integer; const S: String; I: NativeInt; Checked: Boolean): Integer;
@@ -572,6 +644,7 @@ begin
   Items.Insert(Index, S);
   Ints[Index] := I;
   Self.Checked[Index] := Checked;
+  Result := Index;
 end;
 
 procedure THWMultiCheckListBox.InsertState(Index: Integer);
@@ -744,7 +817,7 @@ end;
 function THWMultiCheckListBox.GetSelected(Index: Integer): Boolean;
 begin
   CheckItemIndex(Index);
-  Result := (Index = FItemIndex);
+  Result := (Index = ItemIndex);
 end;
 
 procedure THWMultiCheckListBox.SetSelected(Index: Integer; const Value: Boolean);
@@ -753,7 +826,7 @@ begin
 
   if Value then
     ItemIndex := Index
-  else if FItemIndex = Index then
+  else if ItemIndex = Index then
     ItemIndex := pred(LOW);
 end;
 
@@ -766,6 +839,17 @@ function THWMultiCheckListBox.SetCheck(Index, CheckBoxNo: Integer; State: Boolea
 begin
   ChangeChecked(Index, CheckBoxNo, State, False);
   if FireEvent then DoClickCheck;
+  Result := Index;
+end;
+
+function THWMultiCheckListBox.SetCheck(O: TObject; State : Boolean; FireEvent: Boolean = True): Integer;
+begin
+  Result := SetCheck(O, 0, State, FireEvent);
+end;
+
+function THWMultiCheckListBox.SetCheck(Index: Integer; State : Boolean; FireEvent: Boolean = True): Integer;
+begin
+  Result := SetCheck(Index, 0, State, FireEvent);
 end;
 
 procedure THWMultiCheckListBox.SetCheckAll(CheckBoxNo: Integer; Checked: Boolean; FireEvent: Boolean);
@@ -787,7 +871,10 @@ begin
   if FCheckBoxCount <> NewValue then begin
     FCheckBoxCount := NewValue;
 
-    for I := 0 to Count - 1 do
+    if not ValidCheckBox(KbdCheckBoxNo) then
+      KbdCheckBoxNo := -1;
+
+    for I := LOW to HIGH do
       SetLength(FChecked[I], FCheckBoxCount);
 
     RequestUpdate;
@@ -871,6 +958,16 @@ begin
   if FireEvent then Click;
 end;
 
+function THWMultiCheckListBox.Scale(Dpi96: Integer): Integer;
+var M: TMonitor;
+begin
+  M := Monitor;
+  if Assigned(M) then
+    Result := MulDiv(Dpi96, M.PixelsPerInch, Screen.DefaultPixelsPerInch)
+  else
+    Result := Dpi96;
+end;
+
 procedure THWMultiCheckListBox.SetBorderStyle(const Value: TBorderStyle);
 begin
   if FBorderStyle <> Value then begin
@@ -880,28 +977,23 @@ begin
 end;
 
 function THWMultiCheckListBox.EffectiveItemHeight: Integer;
+var
+  Scale4: Integer;
 begin
   if FItemHeight > 0 then
     Exit(FItemHeight);
 
-  Canvas.Font := Font;
+  Canvas.Font.Assign(Font);
 
-  Result := Max(
-    Canvas.TextHeight('Wg') + 4,
-    GetSystemMetrics(SM_CYMENUCHECK) + 4
-  );
-
-  Result := Max(Result, 12);
+  Scale4 := Scale(4);
+  Result := Max(Canvas.TextHeight('Wg') + Scale4, GetSystemMetrics(SM_CYMENUCHECK) + Scale4);
+  Result := Max(Result, Scale4 * 3);
 end;
 
 function THWMultiCheckListBox.CheckBoxSize: Integer;
 begin
-  Result := Max(
-    GetSystemMetrics(SM_CXMENUCHECK),
-    GetSystemMetrics(SM_CYMENUCHECK)
-  );
-
-  Result := Max(Result, 13);
+  Result := Max(GetSystemMetrics(SM_CXMENUCHECK), GetSystemMetrics(SM_CYMENUCHECK));
+  Result := Max(Result, Scale(13));
 end;
 
 function THWMultiCheckListBox.GetVisibleCount: Integer;
@@ -937,12 +1029,15 @@ end;
 
 function THWMultiCheckListBox.VisibleItems: TArray<Integer>;
 var
-  I: Integer;
+  I, J: Integer;
 begin
-  SetLength(Result, 0);
-  for i := LOW to HIGH do
-    if FVisibleItems[i] then
-      Result := Result + [i];
+  SetLength(Result, Count);
+  J := System.LOW(Result);
+  for i := LOW to HIGH do if FVisibleItems[i] then begin
+    Result[J] := I;
+    INC(J);
+  end;
+  SetLength(Result, J);
 end;
 
 function THWMultiCheckListBox.VisibleOrdinalOfIndex(Index: Integer): Integer;
@@ -969,6 +1064,11 @@ end;
 function THWMultiCheckListBox.IndexOf(O: TObject): Integer;
 begin
   Result:=Items.IndexOfObject(O);
+end;
+
+function THWMultiCheckListBox.IndexOf(I: NativeInt): Integer;
+begin
+  Result := IndexOf(TObject(I));
 end;
 
 function THWMultiCheckListBox.IndexOfVisibleOrdinal(Ordinal: Integer): Integer;
@@ -998,6 +1098,17 @@ begin
       Exit(I);
 
   Result := pred(LOW);
+end;
+
+function THWMultiCheckListBox.Form: TCustomForm;
+var C: TControl;
+begin
+  C := Parent;
+  repeat
+    if C is TCustomForm then Exit(TCustomForm(C));
+    C := C.Parent;
+  until not Assigned(C);
+  Result := NIL;
 end;
 
 function THWMultiCheckListBox.LastVisibleIndex: Integer;
@@ -1214,6 +1325,7 @@ var
   B: Integer;
   Flags: UINT;
   IsSelected: Boolean;
+  Scale2: Integer;
   BkColor: TColor;
   TextColor: TColor;
   Details: TThemedElementDetails;
@@ -1260,7 +1372,7 @@ begin
 
   R := Rect(0, Y, ClientWidth, Y + H);
 
-  IsSelected := Index = FItemIndex;
+  IsSelected := (Index = FItemIndex);
 
   if not Enabled then begin
     BkColor := Color;
@@ -1273,162 +1385,70 @@ begin
     TextColor := Font.Color;
   end;
 
+  Canvas.Font.Assign(Font);
+  Canvas.Font.Color := TextColor;
+  DoGetTextInfo(Index, Canvas.Font, BkColor, Enabled, Focused, IsSelected);
+
   Canvas.Brush.Color := BkColor;
   Canvas.FillRect(R);
 
+  Scale2 := Scale(2);
+
   if FCheckBoxCount = 0 then
-    X := 4
+    X := Scale2 * 2
   else begin
-    X := 2;
+    X := Scale2;
 
     for I := 0 to FCheckBoxCount - 1 do begin
-      BoxR := Rect(
-        X,
-        Y + ((H - B) div 2),
-        X + B,
-        Y + ((H - B) div 2) + B
-      );
+      BoxR := Rect(X, Y + (H - B) div 2, X + B, Y + (H - B) div 2 + B);
 
       case FCheckBoxStyle of
-        TCheckBoxStyle.Classic:
-          DrawClassicCheckBox;
-
-        TCheckBoxStyle.Modern:
-          DrawModernCheckBox;
+        TCheckBoxStyle.Classic: DrawClassicCheckBox;
+        TCheckBoxStyle.Modern : DrawModernCheckBox;
       end;
 
-      Inc(X, B + 2);
+      Inc(X, B + Scale2);
     end;
 
-    Inc(X, 2);
+    Inc(X, Scale2);
   end;
 
-  TextR := Rect(X, Y, ClientWidth - 2, Y + H);
+  TextR := Rect(X, Y, ClientWidth - Scale2, Y + H);
 
-  Canvas.Font := Font;
-  Canvas.Font.Color := TextColor;
   SetBkMode(Canvas.Handle, TRANSPARENT);
 
   S := FItems[Index];
 
-  DrawText(
-    Canvas.Handle,
-    PChar(S),
-    Length(S),
-    TextR,
-    DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS or DT_NOPREFIX
-  );
+  DrawText(Canvas.Handle, PChar(S), Length(S), TextR, DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS or DT_NOPREFIX);
 
   if Focused and IsSelected then begin
     R.Right := ClientWidth;
-    Winapi.Windows.DrawFocusRect(Canvas.Handle, R);
+    Canvas.DrawFocusRect(R);
   end;
 end;
-
-(*
-procedure THWMultiCheckListBox.DrawItem(Index, Y: Integer);
-var
-  R: TRect;
-  TextR: TRect;
-  BoxR: TRect;
-  I: Integer;
-  X: Integer;
-  S: string;
-  H: Integer;
-  B: Integer;
-  Flags: UINT;
-  IsSelected: Boolean;
-  BkColor: TColor;
-  TextColor: TColor;
-begin
-  H := EffectiveItemHeight;
-  B := CheckBoxSize;
-
-  R := Rect(0, Y, ClientWidth, Y + H);
-
-  IsSelected := Index = FItemIndex;
-
-  if not Enabled then begin
-    BkColor := Color;
-    TextColor := clGrayText;
-  end else if IsSelected then begin
-    BkColor := clHighlight;
-    TextColor := clHighlightText;
-  end else begin
-    BkColor := Color;
-    TextColor := Font.Color;
-  end;
-
-  Canvas.Brush.Color := BkColor;
-  Canvas.FillRect(R);
-
-  if FCheckBoxCount = 0 then
-    X := 4
-  else begin
-    X := 2;
-
-    for I := 0 to FCheckBoxCount - 1 do begin
-      BoxR := Rect(
-        X,
-        Y + ((H - B) div 2),
-        X + B,
-        Y + ((H - B) div 2) + B
-      );
-
-      Flags := DFCS_BUTTONCHECK;
-
-      if FChecked[Index][I] then
-        Flags := Flags or DFCS_CHECKED;
-
-      if not Enabled then
-        Flags := Flags or DFCS_INACTIVE;
-
-      DrawFrameControl(Canvas.Handle, BoxR, DFC_BUTTON, Flags);
-
-      Inc(X, B + 2);
-    end;
-    Inc(X, 2);
-  end;
-
-  TextR := Rect(X, Y, ClientWidth - 2, Y + H);
-
-  Canvas.Font := Font;
-  Canvas.Font.Color := TextColor;
-  SetBkMode(Canvas.Handle, TRANSPARENT);
-
-  S := FItems[Index];
-
-  DrawText(
-    Canvas.Handle,
-    PChar(S),
-    Length(S),
-    TextR,
-    DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS or DT_NOPREFIX
-  );
-
-  if Focused and IsSelected then begin
-    R.Right := ClientWidth;
-    WinAPI.Windows.DrawFocusRect(Canvas.Handle, R);
-  end;
-end;
-*)
 
 procedure THWMultiCheckListBox.Resize;
 begin
-  inherited Resize;
+  inherited;
   RequestUpdate;
 end;
 
 procedure THWMultiCheckListBox.DoEnter;
 begin
-  inherited DoEnter;
+  inherited;
   Invalidate;
 end;
 
 procedure THWMultiCheckListBox.DoExit;
 begin
-  inherited DoExit;
+  inherited;
   Invalidate;
+end;
+
+procedure THWMultiCheckListBox.DoGetTextInfo(Index: Integer; F: TFont; var BkColor: TColor; Enabled, Focused, Selected: Boolean);
+begin
+  if Assigned(FOnGetTextInfo) then
+    FOnGetTextInfo(Self, Index, F, BkColor, Enabled, Focused, Selected);
 end;
 
 procedure THWMultiCheckListBox.CMFontChanged(var Message: TMessage);
@@ -1450,27 +1470,13 @@ begin
   NewTop := FTopVisibleRow;
 
   case Message.ScrollCode of
-    SB_LINEUP:
-      Dec(NewTop);
-
-    SB_LINEDOWN:
-      Inc(NewTop);
-
-    SB_PAGEUP:
-      Dec(NewTop, VisibleRowsOnScreen);
-
-    SB_PAGEDOWN:
-      Inc(NewTop, VisibleRowsOnScreen);
-
-    SB_THUMBPOSITION,
-    SB_THUMBTRACK:
-      NewTop := Message.Pos;
-
-    SB_TOP:
-      NewTop := 0;
-
-    SB_BOTTOM:
-      NewTop := GetVisibleCount - VisibleRowsOnScreen;
+    SB_LINEUP                      : Dec(NewTop);
+    SB_LINEDOWN                    : Inc(NewTop);
+    SB_PAGEUP                      : Dec(NewTop, VisibleRowsOnScreen);
+    SB_PAGEDOWN                    : Inc(NewTop, VisibleRowsOnScreen);
+    SB_THUMBPOSITION,SB_THUMBTRACK : NewTop := Message.Pos;
+    SB_TOP                         : NewTop := 0;
+    SB_BOTTOM                      : NewTop := GetVisibleCount - VisibleRowsOnScreen;
   end;
 
   SetTopVisibleRow(NewTop);
@@ -1488,14 +1494,12 @@ var
 begin
   Result := -1;
 
-  if (P.X < 0) or (P.X >= ClientWidth) or
-     (P.Y < 0) or (P.Y >= ClientHeight) then
-    Exit;
-
-  Row := P.Y div EffectiveItemHeight;
-  Result := IndexOfVisibleOrdinal(FTopVisibleRow + Row);
-  if Result > HIGH then
-    if Existing then Result := pred(LOW) else Result := succ(HIGH);
+  if InRange(P.X, 0, ClientWidth - 1) and InRange(P.Y, 0, ClientHeight - 1) then begin
+    Row := P.Y div EffectiveItemHeight;
+    Result := IndexOfVisibleOrdinal(FTopVisibleRow + Row);
+    if not ValidIndex(Result) then
+      if Existing then Result := pred(LOW) else Result := succ(HIGH);
+  end;
 end;
 
 function THWMultiCheckListBox.ItemAtPos(X, Y: Integer; Existing: Boolean): Integer;
@@ -1507,6 +1511,7 @@ function THWMultiCheckListBox.CheckBoxNoAtX(X: Integer): Integer;
 var
   I: Integer;
   B: Integer;
+  Scale2: Integer;
   LeftPos: Integer;
 begin
   Result := -1;
@@ -1515,13 +1520,14 @@ begin
     Exit;
 
   B := CheckBoxSize;
-  LeftPos := 2;
+  Scale2 := Scale(2);
+  LeftPos := Scale2;
 
   for I := 0 to FCheckBoxCount - 1 do begin
-    if (X >= LeftPos) and (X < LeftPos + B) then
+    if InRange(X, LeftPos, LeftPos + B - 1) then
       Exit(I);
 
-    Inc(LeftPos, B + 2);
+    Inc(LeftPos, B + Scale2);
   end;
 end;
 
@@ -1537,12 +1543,22 @@ begin
   Result := ValidCheckBox(CheckBoxNo);
 end;
 
+function THWMultiCheckListBox.Monitor: TMonitor;
+var F: TCustomForm;
+begin
+  F := Form;
+  if Assigned(F) then
+    Result := Screen.MonitorFromPoint(F.BoundsRect.CenterPoint)
+  else
+    Result := NIL;
+end;
+
 procedure THWMultiCheckListBox.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 var
   Index: Integer;
   CheckNo: Integer;
 begin
-  inherited MouseDown(Button, Shift, X, Y);
+  inherited;
 
   if Button <> mbLeft then
     Exit;
@@ -1564,10 +1580,7 @@ begin
       DoClickCheck; // Also call old-style TCheckListBox compatible CheckClicked event
 end;
 
-function THWMultiCheckListBox.DoMouseWheel(
-  Shift: TShiftState;
-  WheelDelta: Integer;
-  MousePos: TPoint): Boolean;
+function THWMultiCheckListBox.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint): Boolean;
 var
   Lines: Integer;
   Steps: Integer;
@@ -1590,79 +1603,59 @@ var
   NewIndex: Integer;
   Ordinal: Integer;
 begin
-  inherited KeyDown(Key, Shift);
+  inherited;
 
-  NewIndex := FItemIndex;
+  if Key > 0 then begin
+    NewIndex := pred(LOW);
 
-  if Shift=[] then
-    case Key of
-      VK_UP:
-          if ValidIndex(FItemIndex) then
-            NewIndex := PrevVisibleIndex(FItemIndex)
-          else
-            NewIndex := LastVisibleIndex;
-
-      VK_DOWN:
-          if ValidIndex(FItemIndex) then
-            NewIndex := NextVisibleIndex(FItemIndex)
-          else
-            NewIndex := FirstVisibleIndex;
-
-      VK_PRIOR:
-          if not ValidIndex(FItemIndex) then
-            NewIndex := FirstVisibleIndex
-          else begin
-            Ordinal := VisibleOrdinalOfIndex(FItemIndex);
-            if Ordinal < 0 then
-              Ordinal := FTopVisibleRow;
-
-            NewIndex := IndexOfVisibleOrdinal(Max(0, Ordinal - VisibleRowsOnScreen));
-          end;
-
-      VK_NEXT:
-          if not ValidIndex(FItemIndex) then
-            NewIndex := FirstVisibleIndex
-          else begin
-            Ordinal := VisibleOrdinalOfIndex(FItemIndex);
-            if Ordinal < 0 then
-              Ordinal := FTopVisibleRow;
-
-            NewIndex := IndexOfVisibleOrdinal(
-              Min(GetVisibleCount - 1, Ordinal + VisibleRowsOnScreen)
-            );
-          end;
-
-      VK_SPACE:
-          if ValidIndex(FItemIndex) and (FCheckBoxCount > 0) then begin
-            if ChangeChecked(FItemIndex, KbdCheckBoxNo, not FChecked[FItemIndex][KbdCheckBoxNo], True) then
-              DoClickCheck;
-
-            Key := 0;
-            if AutoAdvance then
-              NewIndex := NextVisibleIndex(FItemIndex)
-            else
-              Exit;
-          end;
-
-      VK_HOME:
-        NewIndex := FirstVisibleIndex;
-
-      VK_END:
-        NewIndex := LastVisibleIndex;
-
-    else // OTHERWISE //
+    if Shift=[] then
+      case Key of
+        VK_UP    : if ValidIndex(FItemIndex) then
+                     NewIndex := PrevVisibleIndex(FItemIndex)
+                   else
+                     NewIndex := LastVisibleIndex;
+        VK_DOWN  : if ValidIndex(FItemIndex) then
+                     NewIndex := NextVisibleIndex(FItemIndex)
+                   else
+                     NewIndex := FirstVisibleIndex;
+        VK_PRIOR : if not ValidIndex(FItemIndex) then
+                     NewIndex := FirstVisibleIndex
+                   else begin
+                     Ordinal := VisibleOrdinalOfIndex(FItemIndex);
+                     if Ordinal < 0 then
+                       Ordinal := FTopVisibleRow;
+                     NewIndex := IndexOfVisibleOrdinal(Max(LOW, Ordinal - VisibleRowsOnScreen));
+                   end;
+        VK_NEXT  : if not ValidIndex(FItemIndex) then
+                     NewIndex := FirstVisibleIndex
+                   else begin
+                     Ordinal := VisibleOrdinalOfIndex(FItemIndex);
+                     if Ordinal < 0 then
+                       Ordinal := FTopVisibleRow;
+                     NewIndex := IndexOfVisibleOrdinal(Min(GetVisibleCount - 1, Ordinal + VisibleRowsOnScreen));
+                   end;
+        VK_SPACE : if ValidIndex(FItemIndex) and (FCheckBoxCount > 0) and (KbdCheckBoxNo >= 0) then begin
+                     CheckCheckBoxNo(KbdCheckBoxNo);
+                     if ChangeChecked(FItemIndex, KbdCheckBoxNo, not FChecked[FItemIndex][KbdCheckBoxNo], True) then
+                       DoClickCheck;
+                     if AutoAdvance then
+                       NewIndex := NextVisibleIndex(FItemIndex)
+                     else
+                       NewIndex := pred(LOW);
+                   end;
+        VK_HOME  : NewIndex := FirstVisibleIndex;
+        VK_END   : NewIndex := LastVisibleIndex;
+      else // OTHERWISE //
+        Exit;
+      end
+    else
       Exit;
-    end;
 
-  if ValidIndex(NewIndex) then
-    ItemIndex := NewIndex;
+    if ValidIndex(NewIndex) then
+      ItemIndex := NewIndex;
 
-  Key := 0;
-end;
-
-function THWMultiCheckListBox.IndexOf(I: NativeInt): Integer;
-begin
-  Result := IndexOf(TObject(I));
+    Key := 0;
+  end;
 end;
 
 end.
