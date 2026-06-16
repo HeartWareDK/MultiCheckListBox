@@ -1,9 +1,11 @@
 # MultiCheckListBox
 
-    THWMultiCheckListBox
+  THWMultiCheckListBox
   --------------------
   Authored by ChatGPT (not Codex) in June 2026.
+  
   Updated/Adapted by HeartWare
+  
   (C) 2026 HeartWare
 
   License: Free for private and non-commercial use only.
