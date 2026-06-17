@@ -103,6 +103,14 @@
 
   However, see the description of OnCheckBoxClicked for overrides to this rule.
 
+  CheckBoxStyle
+  -------------
+
+  Use this to define the look of the CheckBoxes displayed. It has two modes:
+
+    TCheckBoxStyle.Classic  The Pre-Win10 (XP?) version with a shadow
+    TCheckBoxStyle.Modern   The Win10/Win11 version (square without shadow)
+
   ItemIndex and OnClick
   ---------------------
   ItemIndex is the logical selected item index, not the visible row number.
