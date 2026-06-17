@@ -178,6 +178,8 @@
   Specifies the CheckBoxNo that is toggled on keyboard (Space bar) toggling.
   Default = 0 (the first CheckBox).
 
+  Set it to -1 to disable keyboard toggling (Space key will not be processed)
+
   AutoAdvance
   -----------
   Specifies whether or not the selection bar advances to the next visible item
@@ -198,7 +200,7 @@
 
   Also, it is explicitly unsafe to call Clear(True) if you have stored Ints[]
   in the ListBox, as this will result in an attempt to free a value that is
-  not an Object, but an arbitary index (which will then be interpreted as the
+  not an Object, but an arbitary integer (which will then be interpreted as the
   address of a TObject instance).
 
 # Updates:
