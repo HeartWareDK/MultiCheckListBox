@@ -103,6 +103,14 @@ unit HeartWare.MultiCheckListBox;
 
   However, see the description of OnCheckBoxClicked for overrides to this rule.
 
+  CheckBoxStyle
+  -------------
+
+  Use this to define the look of the CheckBoxes displayed. It has two modes:
+
+    TCheckBoxStyle.Classic  The Pre-Win10 (XP?) version with a shadow
+    TCheckBoxStyle.Modern   The Win10/Win11 version (square without shadow)
+
   ItemIndex and OnClick
   ---------------------
   ItemIndex is the logical selected item index, not the visible row number.
@@ -170,6 +178,8 @@ unit HeartWare.MultiCheckListBox;
   Specifies the CheckBoxNo that is toggled on keyboard (Space bar) toggling.
   Default = 0 (the first CheckBox).
 
+  Set it to -1 to disable keyboard toggling (Space key will not be processed)
+
   AutoAdvance
   -----------
   Specifies whether or not the selection bar advances to the next visible item
@@ -190,7 +200,7 @@ unit HeartWare.MultiCheckListBox;
 
   Also, it is explicitly unsafe to call Clear(True) if you have stored Ints[]
   in the ListBox, as this will result in an attempt to free a value that is
-  not an Object, but an arbitary index (which will then be interpreted as the
+  not an Object, but an arbitary integer (which will then be interpreted as the
   address of a TObject instance).
 }
 
@@ -260,7 +270,7 @@ type
     procedure SetVisibleItem(Index: Integer; const Value: Boolean);
     function GetSelected(Index: Integer): Boolean;
     procedure SetSelected(Index: Integer; const Value: Boolean);
-    procedure SetCheckBoxStyle(const Value: TCheckBoxStyle);
+    procedure SetCheckBoxStyle(Value: TCheckBoxStyle);
 
     procedure SetItems(const Value: TStrings);
     procedure ItemsChanged(Sender: TObject);
@@ -299,6 +309,8 @@ type
     procedure WMGetDlgCode(var Message: TWMGetDlgCode); message WM_GETDLGCODE;
     procedure CMFontChanged(var Message: TMessage); message CM_FONTCHANGED;
     procedure CMEnabledChanged(var Message: TMessage); message CM_ENABLEDCHANGED;
+    procedure WMLButtonDblClk(var Message: TWMLButtonDblClk); message WM_LBUTTONDBLCLK;
+
     function GetItem(Index: Integer): String;
 
     function GetInt(Index: Integer): NativeInt;
@@ -345,8 +357,10 @@ type
     function VisibleItems: TArray<Integer>;
     function CheckedIndices(CheckBoxNo: Integer = 0): TArray<Integer>;
     function Add(const S: String; O: TObject = nil): Integer; overload; inline;
+    function Add(const S: String; O: TObject; Checked: Boolean = False; CheckBoxNo: Integer = 0): Integer; overload;
     function Add(const S: String; I: NativeInt): Integer; overload; inline;
-    function Add(const S: String; I: NativeInt; Checked: Boolean): Integer; overload; inline;
+    function Add(const S: String; I: NativeInt; Checked: Boolean ; CheckBoxNo: Integer = 0): Integer; overload; inline;
+    function Add(O: TObject; Checked: Boolean = False; CheckBoxNo: Integer = 0) : Integer; overload; inline;
     function Insert(Index: Integer; const S: String; O: TObject = nil): Integer; overload; inline;
     function Insert(Index: Integer; const S: String; I: NativeInt): Integer; overload; inline;
     function Insert(Index: Integer; const S: String; I: NativeInt; Checked: Boolean): Integer; overload; inline;
@@ -431,6 +445,7 @@ type
     property OnMouseLeave;
     property OnMouseMove;
     property OnMouseUp;
+    property OnResize;
   published
     property OnGetTextInfo: THWOnGetTextInfoEvent read FOnGetTextInfo write FOnGetTextInfo;
     property AutoAdvance: Boolean read FAutoAdvance write FAutoAdvance default True;
@@ -530,10 +545,20 @@ begin
   Result:=Items.AddObject(S, TObject(I))
 end;
 
-function THWMultiCheckListBox.Add(const S: String; I: NativeInt; Checked: Boolean): Integer;
+function THWMultiCheckListBox.Add(const S: String; I: NativeInt; Checked: Boolean ; CheckBoxNo: Integer = 0): Integer;
 begin
   Result:=Add(S,I);
-  Self.Checked[Result]:=Checked;
+  if Checked then SetCheck(Result, CHeckBoxNo, True, False)
+end;
+
+function THWMultiCheckListBox.Add(const S: String; O: TObject; Checked: Boolean = False; CheckBoxNo: Integer = 0): Integer;
+begin
+  Result:=Add(S,NativeInt(O), Checked, CheckBoxNo)
+end;
+
+function THWMultiCheckListBox.Add(O: TObject; Checked: Boolean = False; CheckBoxNo: Integer = 0): Integer;
+begin
+  Result:=Add(O.ToString, O, Checked, CheckBoxNo);
 end;
 
 procedure THWMultiCheckListBox.BeginUpdate;
@@ -838,7 +863,10 @@ end;
 function THWMultiCheckListBox.SetCheck(Index, CheckBoxNo: Integer; State: Boolean; FireEvent: Boolean = True): Integer;
 begin
   ChangeChecked(Index, CheckBoxNo, State, False);
-  if FireEvent then DoClickCheck;
+  if FireEvent then begin
+    DoCheckBoxClicked(Index, CHeckBoxNo, State);
+    DoClickCheck
+  end;
   Result := Index;
 end;
 
@@ -881,7 +909,7 @@ begin
   end;
 end;
 
-procedure THWMultiCheckListBox.SetCheckBoxStyle(const Value: TCheckBoxStyle);
+procedure THWMultiCheckListBox.SetCheckBoxStyle(Value: TCheckBoxStyle);
 begin
   if FCheckBoxStyle <> Value then begin
     FCheckBoxStyle := Value;
@@ -1488,6 +1516,16 @@ begin
   Message.Result := Message.Result or DLGC_WANTARROWS;
 end;
 
+procedure THWMultiCheckListBox.WMLButtonDblClk(var Message: TWMLButtonDblClk);
+begin
+  if CanFocus then
+    SetFocus;
+
+  DblClick;
+
+  Message.Result := 0;
+end;
+
 function THWMultiCheckListBox.ItemAtPos(P: TPoint; Existing: Boolean): Integer;
 var
   Row: Integer;
@@ -1605,7 +1643,7 @@ var
 begin
   inherited;
 
-  if Key > 0 then begin
+  if Key <> 0 then begin
     NewIndex := pred(LOW);
 
     if Shift=[] then
