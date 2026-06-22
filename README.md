@@ -205,6 +205,8 @@
 
 # Updates:
 ```text
+  22/06-2026  OnDblClick event fixed.
+              Various touch-ups. New OVERLOADed Add methods.
   16/06-2026  Updated README file to better describe properties and workflow
               New Event: OnGetTextInfo
   12/06-2026  Updated file structure.
